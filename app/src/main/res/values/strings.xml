@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ILocate</string>
+    <string name="instructions">Click on UNLOCK button to unlock the screen</string><string name="unlock">UNLOCK</string>
+</resources>
