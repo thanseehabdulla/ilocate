@@ -36,9 +36,32 @@
         android:text="ILocate"
         android:textColor="#FFF"
         android:textSize="44dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Never Get The Phone on wrong hands"
+        android:textColor="#FFF"
+        android:textSize="14dp"
+        android:layout_marginBottom="24dp"
+        android:layout_above="@+id/editText"
+        android:layout_centerHorizontal="true" />
+
+    <EditText
+        android:id="@+id/editText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_above="@+id/indicator_dots"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="47dp" />
+        android:layout_marginBottom="20dp"
+        android:ems="10"
+        android:hint="Recovery Mobile Number"
+        android:textColorHint="#fff"
+        android:textColor="#fff"
+        android:inputType="text|phone" />
 
 
 </RelativeLayout>
