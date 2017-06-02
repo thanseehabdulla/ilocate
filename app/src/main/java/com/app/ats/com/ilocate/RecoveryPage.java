@@ -61,9 +61,14 @@ public class RecoveryPage extends Activity implements
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main);
+
+        getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("page", "recovery").apply();
+
         final MediaPlayer mediaPlayer = MediaPlayer.create(this, R.raw.siren);
         mPinLockView = (PinLockView) findViewById(R.id.pin_lock_view);
+        mediaPlayer.setLooping(true);
         mediaPlayer.start();
+
         mIndicatorDots = (IndicatorDots) findViewById(R.id.indicator_dots);
         mPinLockView.attachIndicatorDots(mIndicatorDots);
 
@@ -78,6 +83,7 @@ public class RecoveryPage extends Activity implements
 
                 if (pin.equals(pinss)) {
                     mediaPlayer.stop();
+                    getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("page", "start").apply();
                     unlockHomeButton();
 
 

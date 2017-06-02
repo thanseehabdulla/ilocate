@@ -26,6 +26,10 @@ public class StartActivity extends Activity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
 
+        getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("page", "start").apply();
+
+
+
        ed = (EditText) findViewById(R.id.editText);
 
         mPinLockView = (PinLockView) findViewById(R.id.pin_lock_view);
@@ -38,15 +42,18 @@ public class StartActivity extends Activity{
             public void onComplete(String pin) {
 
                 String email = ed.getText().toString();
-                getSharedPreferences("ilocate",MODE_PRIVATE).edit().putString("pin",pin).apply();
-                getSharedPreferences("ilocate",MODE_PRIVATE).edit().putString("email",email).apply();
-                getSharedPreferences("ilocate",MODE_PRIVATE).edit().putInt("count",0).apply();
-                Toast.makeText(getApplicationContext(),"Changes have been saved , App is minimizing for protection service",Toast.LENGTH_SHORT).show();
+                if(email.equals(""))
+                    Toast.makeText(getApplicationContext(),"please fill all the forms",Toast.LENGTH_SHORT).show();
+               else {
+                    getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("pin", pin).apply();
+                    getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("email", email).apply();
+                    getSharedPreferences("ilocate", MODE_PRIVATE).edit().putInt("count", 0).apply();
+                    Toast.makeText(getApplicationContext(), "Changes have been saved , App is minimizing for protection service", Toast.LENGTH_SHORT).show();
 
-                Intent i = new Intent(getApplicationContext(),MainActivity.class);
-                finish();
-                startActivity(i);
-
+                    Intent i = new Intent(getApplicationContext(), MainActivity.class);
+                    finish();
+                    startActivity(i);
+                }
             }
 
             @Override

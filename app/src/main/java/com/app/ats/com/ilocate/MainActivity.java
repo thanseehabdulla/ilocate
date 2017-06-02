@@ -3,11 +3,15 @@ package com.app.ats.com.ilocate;
 import android.Manifest;
 import android.app.Activity;
 import android.app.KeyguardManager;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.hardware.Camera;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -26,10 +30,28 @@ import android.widget.Toast;
 import com.andrognito.pinlockview.IndicatorDots;
 import com.andrognito.pinlockview.PinLockListener;
 import com.andrognito.pinlockview.PinLockView;
+import com.app.ats.com.ilocate.gmailpackage.GMailSender;
+import com.app.ats.com.ilocate.photohandler.PhotoHandler;
 import com.app.ats.com.ilocate.utils.LockscreenService;
 import com.app.ats.com.ilocate.utils.LockscreenUtils;
 
 import java.security.SecureRandom;
+import java.util.Properties;
+
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.activation.FileDataSource;
+import javax.mail.BodyPart;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
 import static android.R.id.message;
 
@@ -44,12 +66,18 @@ public class MainActivity extends Activity implements
 
     private static final int MY_PERMISSIONS_REQUEST_SEND_SMS = 0;
 
+
+
     // Member variables
     private LockscreenUtils mLockscreenUtils;
     private PinLockView mPinLockView;
     private IndicatorDots mIndicatorDots;
     private String phoneNo;
     private String messages;
+    public static boolean appStatus;
+    private Camera camera;
+    private int cameraId = 0;
+    public Context context;
 
     // Set appropriate flags to make the screen appear over the keyguard
 //    @Override
@@ -67,10 +95,45 @@ public class MainActivity extends Activity implements
 //    }
 
 
-    protected void sendSMSMessage(String pin, String mobile, Location loc) {
-        phoneNo = mobile;
-        messages = "The recovery pin is :" + pin + "from  latitude" + loc.getLatitude() + "longitude" + loc.getLongitude();
+    @Override
+    protected void onPause() {
+        super.onPause();
+        appStatus = false;
+//        try {
+//            camera.release();
+//            camera = null;
+//        }catch (Exception e) {
+//        }
 
+        }
+
+    protected void sendSMSMessage(String pin, String mobile, GPSTracker loc) {
+        phoneNo = mobile;
+
+
+        // check if GPS enabled
+        if(loc.canGetLocation()){
+
+            double latitude = loc.getLatitude();
+            double longitude = loc.getLongitude();
+
+            // \n is for new line
+            Toast.makeText(getApplicationContext(), "Your Location is - \nLat: "
+                    + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
+        }else{
+            // can't get location
+            // GPS or Network is not enabled
+            // Ask user to enable GPS/network in settings
+            loc.showSettingsAlert();
+        }
+
+
+
+try {
+    messages = "The recovery pin is :" + pin + "from  latitude" + loc.getLatitude() + "longitude" + loc.getLongitude();
+}catch (Exception e){
+    messages = "The recovery pin is :" + pin ;
+}
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -93,7 +156,7 @@ public class MainActivity extends Activity implements
                     SmsManager smsManager = SmsManager.getDefault();
                     smsManager.sendTextMessage(phoneNo, null, messages, null, null);
                     Toast.makeText(getApplicationContext(), "SMS sent.",
-                            Toast.LENGTH_LONG).show();
+                               Toast.LENGTH_LONG).show();
                 } else {
                     Toast.makeText(getApplicationContext(),
                             "SMS faild, please try again.", Toast.LENGTH_LONG).show();
@@ -118,9 +181,11 @@ public class MainActivity extends Activity implements
         mIndicatorDots = (IndicatorDots) findViewById(R.id.indicator_dots);
         mPinLockView.attachIndicatorDots(mIndicatorDots);
 
+        appStatus = true;
+
         mPinLockView.setPinLockListener(new PinLockListener() {
             public int count;
-            public Location loc;
+            public GPSTracker loc;
             public LocationManager locationManager;
 
             @Override
@@ -129,48 +194,114 @@ public class MainActivity extends Activity implements
                 String pinss = getSharedPreferences("ilocate", MODE_PRIVATE).getString("pin", "0");
                 String mobile = getSharedPreferences("ilocate", MODE_PRIVATE).getString("email", "0");
                  count = getSharedPreferences("ilocate", MODE_PRIVATE).getInt("count", 0);
-                if (pin.equals(pinss))
+                if (pin.equals(pinss)) {
                     unlockHomeButton();
+                    getSharedPreferences("ilocate", MODE_PRIVATE).edit().putInt("count", 0).apply();
+                }
                 else if (count <= 5) {
                     Toast.makeText(getApplicationContext(), "Please try Again, You have " + (5 - count) + " chances left", Toast.LENGTH_SHORT).show();
                     count++;
                     getSharedPreferences("ilocate",MODE_PRIVATE).edit().putInt("count",count).apply();
                 } else if (count > 5) {
-                try {
-                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_TIME_BW_UPDATES, MIN_DISTANCE_CHANGE_FOR_UPDATES, (LocationListener) getApplicationContext());
-                    Log.d("Network", "Network");
-                }catch (Exception e ){
 
-                }
-                    if (locationManager != null) {
-                        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                            // TODO: Consider calling
-                            //    ActivityCompat#requestPermissions
-                            // here to request the missing permissions, and then overriding
-                            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                            //                                          int[] grantResults)
-                            // to handle the case where the user grants the permission. See the documentation
-                            // for ActivityCompat#requestPermissions for more details.
-                            return;
-                        }
-                        loc = locationManager
-                                .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-
-                    }
+                    loc = new GPSTracker(MainActivity.this);
 
 
                     SecureRandom random = new SecureRandom();
                     int num = random.nextInt(10000);
                     String formatted = String.format("%04d", num);
-                    sendSMSMessage(formatted,mobile,loc);
+
+                    // check if GPS enabled
+                    if(loc.canGetLocation()){
+
+                        double latitude = loc.getLatitude();
+                        double longitude = loc.getLongitude();
+
+                        // \n is for new line
+                        Toast.makeText(getApplicationContext(), "Your Location is - \nLat: "
+                                + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
+                    }else{
+                        // can't get location
+                        // GPS or Network is not enabled
+                        // Ask user to enable GPS/network in settings
+                        loc.showSettingsAlert();
+                    }
+
+
+
+                    try {
+                        messages = "The recovery pin is :" + formatted + "from  latitude" + loc.getLatitude() + "longitude" + loc.getLongitude();
+                    }catch (Exception e){
+                        messages = "The recovery pin is :" + formatted ;
+                    }
+
+
+//                    try {
+//                        GMailSender sender = new GMailSender("thanseehabdulla@gmail.com", "thanseeh");
+//                        sender.sendMail("Ilocate",
+//                                messages,
+//                                "thanseehabdulla@gmail.com",
+//                                "thanseehabdulla@gmail.com");
+//                    } catch (Exception e) {
+//                        Log.e("SendMail", e.getMessage(), e);
+//                        Toast.makeText(getApplicationContext(),e.toString(),Toast.LENGTH_SHORT).show();
+//                    }
+
+
+
+
+
+                    if (!getPackageManager()
+                            .hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
+                        Toast.makeText(getApplicationContext(), "No camera on this device", Toast.LENGTH_LONG)
+                                .show();
+                    } else {
+                        cameraId = findFrontFacingCamera();
+                        if (cameraId < 0) {
+                            Toast.makeText(getApplicationContext(), "No front facing camera found.",
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            try {
+                                camera = Camera.open(cameraId);
+                            }catch (Exception e){
+
+                            }
+                                camera.startPreview();
+                            camera.takePicture(null, null,
+                                    new PhotoHandler(getApplicationContext()));
+                        }
+
+                    }
+
+
+
+
+
+                    new GmailAsync(formatted,mobile,messages,getApplicationContext()).execute();
+
+//                    sendSMSMessage(formatted,mobile,loc);
                     getSharedPreferences("ilocate",MODE_PRIVATE).edit().putString("recovery",formatted).apply();
 
-                    Intent iss = new Intent(getApplicationContext(),RecoveryPage.class);
-                    finish();
-                    startActivity(iss);
+
                 }
 
             }
+
+                private int findFrontFacingCamera() {
+                    int cameraId = -1;
+                    // Search for the front facing camera
+                    int numberOfCameras = Camera.getNumberOfCameras();
+                    for (int i = 0; i < numberOfCameras; i++) {
+                        Camera.CameraInfo info = new Camera.CameraInfo();
+                        Camera.getCameraInfo(i, info);
+                        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+//                            Log.d(DEBUG_TAG, "Camera found");
+                            cameraId = i;
+                            break;
+                        }
+                    }
+                    return cameraId;
+                }
 
             @Override
             public void onEmpty() {
@@ -319,4 +450,103 @@ public class MainActivity extends Activity implements
     {
         finish();
     }
+
+
+    class GmailAsync extends AsyncTask<Void, Void, Void> {
+
+        private Exception exception;
+        private String formatted,mobile;
+        private String messages;
+        private final ProgressDialog dialog = new ProgressDialog(MainActivity.this);;
+        private Context context;
+
+        public GmailAsync(String formatted, String mobile, String loc, Context context) {
+            this.formatted=formatted;
+            this.mobile=mobile;
+            this.messages=loc;
+            this.context=context;
+
+
+        }
+
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            dialog.show();
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+
+            Properties props = new Properties();
+            props.put("mail.smtp.auth", "true");
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.host", "smtp.gmail.com");
+            props.put("mail.smtp.port", "587");
+
+            Session session = Session.getInstance(props,
+                    new javax.mail.Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication("infinitmail006@gmail.com", "namoideen");
+                        }
+                    });
+            try {
+                Message message = new MimeMessage(session);
+                message.setFrom(new InternetAddress("infinitmail006@gmail.com"));
+                message.setRecipients(Message.RecipientType.TO,
+                        InternetAddress.parse(mobile));
+                message.setSubject("ILocate");
+
+
+                        MimeBodyPart messageBodyPart = new MimeBodyPart();
+
+                        Multipart multipart = new MimeMultipart();
+
+                        messageBodyPart = new MimeBodyPart();
+                        String fileName = "images";
+                        String file =  context.getSharedPreferences("ilocate", MODE_PRIVATE).getString("image","0");
+                        DataSource source = new FileDataSource(file);
+                        messageBodyPart.setDataHandler(new DataHandler(source));
+                        messageBodyPart.setFileName(fileName);
+                        multipart.addBodyPart(messageBodyPart);
+
+
+
+                BodyPart messageBodyPart2 = new MimeBodyPart();
+                messageBodyPart2.setText("Dear user,"
+                        + "\n\n " + messages);
+                multipart.addBodyPart(messageBodyPart2);
+
+
+                message.setContent(multipart);
+                Transport.send(message);
+
+//                        System.out.println("Done");
+
+            } catch (MessagingException e) {
+                throw new RuntimeException(e);
+            }
+
+
+            return null;
+        }
+
+        protected void onPostExecute(Void feed) {
+            // TODO: check this.exception
+            // TODO: do something with the feed
+        dialog.dismiss();
+
+            Intent iss = new Intent(context,RecoveryPage.class);
+            finish();
+            startActivity(iss);
+
+
+
+        }
+
+
+    }
+
+
 }
