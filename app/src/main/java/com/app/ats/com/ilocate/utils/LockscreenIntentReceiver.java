@@ -17,7 +17,7 @@ public class LockscreenIntentReceiver extends BroadcastReceiver {
 
 		if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)
 				|| intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED)) {
-        if(MainActivity.appStatus == false)
+
             start_lockscreen(context);
 
 		}
@@ -30,15 +30,22 @@ public class LockscreenIntentReceiver extends BroadcastReceiver {
 
 		Intent mIntent;
 
-		String value=context.getSharedPreferences("ilocate", MODE_PRIVATE).getString("page","0");
-		if(value.equals("start"))
-		mIntent= new Intent(context, MainActivity.class);
-		else
-			mIntent= new Intent(context, RecoveryPage.class);
+		String value = context.getSharedPreferences("ilocate", MODE_PRIVATE).getString("page", "0");
+		if (value.equals("start")) {
+			if (MainActivity.appStatus == false) {
+				mIntent = new Intent(context, MainActivity.class);
+				mIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
-		mIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+				context.startActivity(mIntent);
+			}
+		} else {
+			if (RecoveryPage.appStatus == false) {
+				mIntent = new Intent(context, RecoveryPage.class);
 
-		context.startActivity(mIntent);
+				mIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+				context.startActivity(mIntent);
+			}
+			}
 	}
-
 }

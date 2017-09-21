@@ -17,6 +17,7 @@ import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -31,12 +32,12 @@ public class RecoveryPage extends Activity implements
         LockscreenUtils.OnLockStatusChangedListener {
 
 
-
-
     // Member variables
     private LockscreenUtils mLockscreenUtils;
     private PinLockView mPinLockView;
     private IndicatorDots mIndicatorDots;
+    public static boolean appStatus;
+    private MediaPlayer mediaPlayer;
 
 
     // Set appropriate flags to make the screen appear over the keyguard
@@ -54,25 +55,45 @@ public class RecoveryPage extends Activity implements
 //        super.onAttachedToWindow();
 //    }
 
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        appStatus = false;
+        mediaPlayer.stop();
+
+//        try {
+//            camera.release();
+//            camera = null;
+//        }catch (Exception e) {
+//        }
+
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionHandler(this));
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
 
-        getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("page", "recovery").apply();
 
-        final MediaPlayer mediaPlayer = MediaPlayer.create(this, R.raw.siren);
+        getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("page", "recovery").apply();
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+
+        mediaPlayer = MediaPlayer.create(this, R.raw.siren);
         mPinLockView = (PinLockView) findViewById(R.id.pin_lock_view);
         mediaPlayer.setLooping(true);
-        mediaPlayer.start();
 
+        mediaPlayer.start();
+        appStatus = true;
         mIndicatorDots = (IndicatorDots) findViewById(R.id.indicator_dots);
         mPinLockView.attachIndicatorDots(mIndicatorDots);
 
-            mPinLockView.setPinLockListener(new PinLockListener() {
+        mPinLockView.setPinLockListener(new PinLockListener() {
             public Location loc;
             public LocationManager locationManager;
 
@@ -84,10 +105,14 @@ public class RecoveryPage extends Activity implements
                 if (pin.equals(pinss)) {
                     mediaPlayer.stop();
                     getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("page", "start").apply();
+                    getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("pin", pinss).apply();
                     unlockHomeButton();
 
+                } else {
 
-                }else{
+                    Intent i = new Intent(getApplicationContext(), RecoveryPage.class);
+                    finish();
+                    startActivity(i);
 
                 }
             }
@@ -155,7 +180,15 @@ public class RecoveryPage extends Activity implements
                     break;
             }
         }
-    };
+    }
+
+    ;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mediaPlayer.start();
+    }
 
     // Don't finish Activity on Back press
     @Override
@@ -167,18 +200,48 @@ public class RecoveryPage extends Activity implements
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
 
-        if ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
-                || (keyCode == KeyEvent.KEYCODE_POWER)
-                || (keyCode == KeyEvent.KEYCODE_VOLUME_UP)
-                || (keyCode == KeyEvent.KEYCODE_CAMERA)) {
+
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            //call whatever the function was supposed to be for DPAD_UP and consume the event
+//                return false;
+            Toast.makeText(getApplicationContext(), "volume button is disabled", Toast.LENGTH_LONG).show();
+            return true;
+        }  if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            //call whatever the function was supposed to be for DPAD_DOWN and consume the event
+            Toast.makeText(getApplicationContext(), "volume button is disabled", Toast.LENGTH_LONG).show();
+            return true;
+        }  if (keyCode == KeyEvent.KEYCODE_POWER) {
+            //call whatever the function was supposed to be for DPAD_DOWN and consume the event
+            Toast.makeText(getApplicationContext(), "volume button is disabled", Toast.LENGTH_LONG).show();
+            return true;
+        }  if (keyCode == KeyEvent.KEYCODE_CAMERA) {
+            //call whatever the function was supposed to be for DPAD_DOWN and consume the event
+            Toast.makeText(getApplicationContext(), "volume button is disabled", Toast.LENGTH_LONG).show();
+            return true;
+        }  if ((keyCode == KeyEvent.KEYCODE_HOME)) {
+
+            Toast.makeText(getApplicationContext(), "volume button is disabled", Toast.LENGTH_LONG).show();
+            return true;
+        }  if ((keyCode == KeyEvent.KEYCODE_MENU)) {
+
+            Toast.makeText(getApplicationContext(), "volume button is disabled", Toast.LENGTH_LONG).show();
             return true;
         }
-        if ((keyCode == KeyEvent.KEYCODE_HOME)) {
+        if ((keyCode == KeyEvent.KEYCODE_BACK)) {
 
             return true;
         }
 
-        return false;
+        if (event.getKeyCode() == KeyEvent.KEYCODE_POWER) {
+            Log.i("", "Dispath event power");
+            Intent closeDialog = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
+            sendBroadcast(closeDialog);
+            return true;
+        }
+
+            // pass the key event onto the OS
+            return super.onKeyDown(keyCode, event);
+
 
     }
 
@@ -187,10 +250,16 @@ public class RecoveryPage extends Activity implements
         if (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP
                 || (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN)
                 || (event.getKeyCode() == KeyEvent.KEYCODE_POWER)) {
-            return false;
+            return true;
         }
         if ((event.getKeyCode() == KeyEvent.KEYCODE_HOME)) {
 
+            return true;
+        }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_POWER) {
+            Log.i("", "Dispath event power");
+            Intent closeDialog = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
+            sendBroadcast(closeDialog);
             return true;
         }
         return false;
@@ -235,8 +304,8 @@ public class RecoveryPage extends Activity implements
     }
 
     //Simply unlock device by finishing the activity
-    private void unlockDevice()
-    {
+    private void unlockDevice() {
         finish();
     }
 }
+

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/mine_shaft">
+
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Profile Form"
+        android:textColor="#fff"
+        android:layout_marginTop="30dp"/>
+
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/ed1"
+        android:layout_marginTop="20dp"
+        android:hint="name"
+        android:textColor="#000"
+        android:textColorHint="#000"/>
+
+
+    <EditText
+        android:id="@+id/ed2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="mobile"
+        android:layout_marginTop="20dp"
+        android:textColor="#000"
+        android:textColorHint="#000" />
+
+    <EditText
+        android:id="@+id/ed3"
+        android:layout_width="398dp"
+        android:layout_height="wrap_content"
+        android:hint="email"
+        android:layout_marginTop="20dp"
+        android:textColor="#000"
+        android:textColorHint="#000" />
+
+
+    <Button
+        android:id="@+id/button3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:layout_margin="120dp"
+        android:text="submit" />
+
+</LinearLayout>

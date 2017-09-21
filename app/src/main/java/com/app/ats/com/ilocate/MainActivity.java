@@ -8,14 +8,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
-import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.telephony.PhoneStateListener;
 import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
@@ -24,13 +21,11 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.Toast;
 
 import com.andrognito.pinlockview.IndicatorDots;
 import com.andrognito.pinlockview.PinLockListener;
 import com.andrognito.pinlockview.PinLockView;
-import com.app.ats.com.ilocate.gmailpackage.GMailSender;
 import com.app.ats.com.ilocate.photohandler.PhotoHandler;
 import com.app.ats.com.ilocate.utils.LockscreenService;
 import com.app.ats.com.ilocate.utils.LockscreenUtils;
@@ -53,8 +48,6 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
-import static android.R.id.message;
-
 public class MainActivity extends Activity implements
         LockscreenUtils.OnLockStatusChangedListener {
 
@@ -65,7 +58,6 @@ public class MainActivity extends Activity implements
     public static final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1;
 
     private static final int MY_PERMISSIONS_REQUEST_SEND_SMS = 0;
-
 
 
     // Member variables
@@ -105,14 +97,14 @@ public class MainActivity extends Activity implements
 //        }catch (Exception e) {
 //        }
 
-        }
+    }
 
     protected void sendSMSMessage(String pin, String mobile, GPSTracker loc) {
         phoneNo = mobile;
 
 
         // check if GPS enabled
-        if(loc.canGetLocation()){
+        if (loc.canGetLocation()) {
 
             double latitude = loc.getLatitude();
             double longitude = loc.getLongitude();
@@ -120,7 +112,7 @@ public class MainActivity extends Activity implements
             // \n is for new line
             Toast.makeText(getApplicationContext(), "Your Location is - \nLat: "
                     + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
-        }else{
+        } else {
             // can't get location
             // GPS or Network is not enabled
             // Ask user to enable GPS/network in settings
@@ -128,12 +120,11 @@ public class MainActivity extends Activity implements
         }
 
 
-
-try {
-    messages = "The recovery pin is :" + pin + "from  latitude" + loc.getLatitude() + "longitude" + loc.getLongitude();
-}catch (Exception e){
-    messages = "The recovery pin is :" + pin ;
-}
+        try {
+            messages = "The recovery pin is :" + pin + "from  latitude" + loc.getLatitude() + "longitude" + loc.getLongitude();
+        } catch (Exception e) {
+            messages = "The recovery pin is :" + pin;
+        }
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -156,7 +147,7 @@ try {
                     SmsManager smsManager = SmsManager.getDefault();
                     smsManager.sendTextMessage(phoneNo, null, messages, null, null);
                     Toast.makeText(getApplicationContext(), "SMS sent.",
-                               Toast.LENGTH_LONG).show();
+                            Toast.LENGTH_LONG).show();
                 } else {
                     Toast.makeText(getApplicationContext(),
                             "SMS faild, please try again.", Toast.LENGTH_LONG).show();
@@ -172,9 +163,16 @@ try {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionHandler(this));
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+
+//        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON | WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON);
         setContentView(R.layout.activity_main);
+
 
         mPinLockView = (PinLockView) findViewById(R.id.pin_lock_view);
 
@@ -183,26 +181,30 @@ try {
 
         appStatus = true;
 
+
         mPinLockView.setPinLockListener(new PinLockListener() {
             public int count;
             public GPSTracker loc;
             public LocationManager locationManager;
 
+
             @Override
             public void onComplete(String pin) {
 
                 String pinss = getSharedPreferences("ilocate", MODE_PRIVATE).getString("pin", "0");
-                String mobile = getSharedPreferences("ilocate", MODE_PRIVATE).getString("email", "0");
-                 count = getSharedPreferences("ilocate", MODE_PRIVATE).getInt("count", 0);
+                String mobile = getSharedPreferences("e1", MODE_PRIVATE).getString("e3", "0");
+                count = getSharedPreferences("ilocate", MODE_PRIVATE).getInt("count", 0);
                 if (pin.equals(pinss)) {
                     unlockHomeButton();
                     getSharedPreferences("ilocate", MODE_PRIVATE).edit().putInt("count", 0).apply();
-                }
-                else if (count <= 5) {
+                } else if (count < 5) {
                     Toast.makeText(getApplicationContext(), "Please try Again, You have " + (5 - count) + " chances left", Toast.LENGTH_SHORT).show();
                     count++;
-                    getSharedPreferences("ilocate",MODE_PRIVATE).edit().putInt("count",count).apply();
-                } else if (count > 5) {
+                    getSharedPreferences("ilocate", MODE_PRIVATE).edit().putInt("count", count).apply();
+                    Intent i = new Intent(getApplicationContext(), MainActivity.class);
+                    finish();
+                    startActivity(i);
+                } else if (count >= 5) {
 
                     loc = new GPSTracker(MainActivity.this);
 
@@ -212,7 +214,7 @@ try {
                     String formatted = String.format("%04d", num);
 
                     // check if GPS enabled
-                    if(loc.canGetLocation()){
+                    if (loc.canGetLocation()) {
 
                         double latitude = loc.getLatitude();
                         double longitude = loc.getLongitude();
@@ -220,7 +222,7 @@ try {
                         // \n is for new line
                         Toast.makeText(getApplicationContext(), "Your Location is - \nLat: "
                                 + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
-                    }else{
+                    } else {
                         // can't get location
                         // GPS or Network is not enabled
                         // Ask user to enable GPS/network in settings
@@ -228,12 +230,21 @@ try {
                     }
 
 
-
                     try {
-                        messages = "The recovery pin is :" + formatted + "from  latitude" + loc.getLatitude() + "longitude" + loc.getLongitude();
-                    }catch (Exception e){
-                        messages = "The recovery pin is :" + formatted ;
-                    }
+                        TelephonyManager telemamanger = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+                        String getSimSerialNumber = telemamanger.getSimSerialNumber();
+                        String getSimNumber = telemamanger.getLine1Number();
+
+                        String s;
+                        if (getSimNumber.equals(""))
+                            s = " not allowed by carrier";
+                        else
+                            s = getSimNumber;
+                        try {
+                            messages = "The recovery pin is :" + formatted + "from  latitude" + loc.getLatitude() + "longitude" + loc.getLongitude() + "current phone number used" + s;
+                        } catch (Exception e) {
+                            messages = "The recovery pin is :" + formatted;
+                        }
 
 
 //                    try {
@@ -248,60 +259,56 @@ try {
 //                    }
 
 
-
-
-
-                    if (!getPackageManager()
-                            .hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
-                        Toast.makeText(getApplicationContext(), "No camera on this device", Toast.LENGTH_LONG)
-                                .show();
-                    } else {
-                        cameraId = findFrontFacingCamera();
-                        if (cameraId < 0) {
-                            Toast.makeText(getApplicationContext(), "No front facing camera found.",
-                                    Toast.LENGTH_LONG).show();
+                        if (!getPackageManager()
+                                .hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
+                            Toast.makeText(getApplicationContext(), "No camera on this device", Toast.LENGTH_LONG)
+                                    .show();
                         } else {
-                            try {
-                                camera = Camera.open(cameraId);
-                            }catch (Exception e){
+                            cameraId = findFrontFacingCamera();
+                            if (cameraId < 0) {
+                                Toast.makeText(getApplicationContext(), "No front facing camera found.",
+                                        Toast.LENGTH_LONG).show();
+                            } else {
+                                try {
+                                    camera = Camera.open(cameraId);
+                                } catch (Exception e) {
 
-                            }
+                                }
                                 camera.startPreview();
-                            camera.takePicture(null, null,
-                                    new PhotoHandler(getApplicationContext()));
+                                camera.takePicture(null, null,
+                                        new PhotoHandler(getApplicationContext()));
+                            }
+
                         }
 
-                    }
 
-
-
-
-
-                    new GmailAsync(formatted,mobile,messages,getApplicationContext()).execute();
+                        new GmailAsync(formatted, mobile, messages, getApplicationContext()).execute();
 
 //                    sendSMSMessage(formatted,mobile,loc);
-                    getSharedPreferences("ilocate",MODE_PRIVATE).edit().putString("recovery",formatted).apply();
-
+                        getSharedPreferences("ilocate", MODE_PRIVATE).edit().putString("recovery", formatted).apply();
+                    }catch (Exception e){
+                        sendSMSMessage(formatted, getSharedPreferences("e1", MODE_PRIVATE).getString("e2", "0"), loc);
+                    }
 
                 }
 
             }
 
-                private int findFrontFacingCamera() {
-                    int cameraId = -1;
-                    // Search for the front facing camera
-                    int numberOfCameras = Camera.getNumberOfCameras();
-                    for (int i = 0; i < numberOfCameras; i++) {
-                        Camera.CameraInfo info = new Camera.CameraInfo();
-                        Camera.getCameraInfo(i, info);
-                        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            private int findFrontFacingCamera() {
+                int cameraId = -1;
+                // Search for the front facing camera
+                int numberOfCameras = Camera.getNumberOfCameras();
+                for (int i = 0; i < numberOfCameras; i++) {
+                    Camera.CameraInfo info = new Camera.CameraInfo();
+                    Camera.getCameraInfo(i, info);
+                    if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
 //                            Log.d(DEBUG_TAG, "Camera found");
-                            cameraId = i;
-                            break;
-                        }
+                        cameraId = i;
+                        break;
                     }
-                    return cameraId;
                 }
+                return cameraId;
+            }
 
             @Override
             public void onEmpty() {
@@ -358,7 +365,7 @@ try {
             super.onCallStateChanged(state, incomingNumber);
             switch (state) {
                 case TelephonyManager.CALL_STATE_RINGING:
-                    unlockHomeButton();
+//                    unlockHomeButton();
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:
                     break;
@@ -366,7 +373,9 @@ try {
                     break;
             }
         }
-    };
+    }
+
+    ;
 
     // Don't finish Activity on Back press
     @Override
@@ -384,6 +393,11 @@ try {
                 || (keyCode == KeyEvent.KEYCODE_CAMERA)) {
             return true;
         }
+        if (keyCode == KeyEvent.KEYCODE_SEARCH) {
+            Log.d("KeyPress", "search");
+            return true;
+        }
+
         if ((keyCode == KeyEvent.KEYCODE_HOME)) {
 
             return true;
@@ -446,8 +460,7 @@ try {
     }
 
     //Simply unlock device by finishing the activity
-    private void unlockDevice()
-    {
+    private void unlockDevice() {
         finish();
     }
 
@@ -455,16 +468,17 @@ try {
     class GmailAsync extends AsyncTask<Void, Void, Void> {
 
         private Exception exception;
-        private String formatted,mobile;
+        private String formatted, mobile;
         private String messages;
-        private final ProgressDialog dialog = new ProgressDialog(MainActivity.this);;
+        private final ProgressDialog dialog = new ProgressDialog(MainActivity.this);
+        ;
         private Context context;
 
         public GmailAsync(String formatted, String mobile, String loc, Context context) {
-            this.formatted=formatted;
-            this.mobile=mobile;
-            this.messages=loc;
-            this.context=context;
+            this.formatted = formatted;
+            this.mobile = mobile;
+            this.messages = loc;
+            this.context = context;
 
 
         }
@@ -473,6 +487,7 @@ try {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
+            dialog.setCancelable(false);
             dialog.show();
         }
 
@@ -499,18 +514,17 @@ try {
                 message.setSubject("ILocate");
 
 
-                        MimeBodyPart messageBodyPart = new MimeBodyPart();
+                MimeBodyPart messageBodyPart = new MimeBodyPart();
 
-                        Multipart multipart = new MimeMultipart();
+                Multipart multipart = new MimeMultipart();
 
-                        messageBodyPart = new MimeBodyPart();
-                        String fileName = "images";
-                        String file =  context.getSharedPreferences("ilocate", MODE_PRIVATE).getString("image","0");
-                        DataSource source = new FileDataSource(file);
-                        messageBodyPart.setDataHandler(new DataHandler(source));
-                        messageBodyPart.setFileName(fileName);
-                        multipart.addBodyPart(messageBodyPart);
-
+                messageBodyPart = new MimeBodyPart();
+                String fileName = "images";
+                String file = context.getSharedPreferences("ilocate", MODE_PRIVATE).getString("image", "0");
+                DataSource source = new FileDataSource(file);
+                messageBodyPart.setDataHandler(new DataHandler(source));
+                messageBodyPart.setFileName(fileName);
+                multipart.addBodyPart(messageBodyPart);
 
 
                 BodyPart messageBodyPart2 = new MimeBodyPart();
@@ -535,12 +549,11 @@ try {
         protected void onPostExecute(Void feed) {
             // TODO: check this.exception
             // TODO: do something with the feed
-        dialog.dismiss();
+            dialog.dismiss();
 
-            Intent iss = new Intent(context,RecoveryPage.class);
+            Intent iss = new Intent(context, RecoveryPage.class);
             finish();
             startActivity(iss);
-
 
 
         }
